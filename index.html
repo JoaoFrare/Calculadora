@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Calculadora de notas | Marista Ipanema</title>
+<style>
+  :root {
+    color-scheme: light;
+    --ink:#152746; --muted:#465a73; --brand:#163a74; --action:#154b9a;
+    --line:#d9e3ef; --surface:#fff; --back:#f1f5fa;
+    --good:#185846; --good-bg:#eaf6f0; --warn:#795015; --warn-bg:#fff4df;
+  }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--back); color:var(--ink); font:1rem/1.5 system-ui,sans-serif }
+  [hidden] { display:none !important }
+  .wrap { width:min(100% - 2.25rem, 67rem); margin-inline:auto }
+  .hero { background:#112d55; color:white; padding:1.65rem 0 2.75rem; border-bottom:4px solid #afc6e5 }
+  .eyebrow { display:flex; gap:.65rem; flex-wrap:wrap; align-items:center; margin:0 0 1rem; font-size:.87rem; font-weight:650; color:#e2ebf8 }
+  .eyebrow span { border-left:1px solid #7992b5; padding-left:.65rem }
+  h1,h2,h3,p { margin:0 }
+  h1 { font-size:clamp(2rem,6vw,3.5rem); line-height:1.12; letter-spacing:-.045em }
+  .hero p { margin-top:.65rem; color:#e2ebf8; max-width:45ch }
+  main { padding-block:1.5rem 1.25rem }
+  .tabs { display:grid; grid-template-columns:1fr 1fr; gap:.3rem; padding:.3rem; background:#e0e8f3; border:1px solid #d3dfed; border-radius:.85rem; width:min(100%,34rem); margin-bottom:1.15rem }
+  button,input { font:inherit }
+  button { cursor:pointer }
+  [role=tab] { border:0; border-radius:.6rem; padding:.6rem .4rem; min-height:3rem; color:var(--brand); font-weight:650; line-height:1.25; background:transparent }
+  [role=tab][aria-selected=true] { background:var(--surface); color:#102c55; box-shadow:0 1px 4px #18305224 }
+  :focus-visible { outline:3px solid #2170cb; outline-offset:3px }
+  .layout { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); align-items:start; gap:1.15rem }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:1rem; padding:clamp(1rem,3vw,1.7rem); min-width:0; box-shadow:0 3px 12px #1c396308 }
+  h2 { font-size:1.28rem; line-height:1.25; letter-spacing:-.02em }
+  h3 { font-size:1.1rem; line-height:1.3 }
+  .intro,.hint,.muted { color:var(--muted) }
+  .intro { margin:.35rem 0 1.05rem }
+  .fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem .9rem }
+  .field { min-width:0 }
+  label { display:block; font-weight:650; line-height:1.25 }
+  .hint { display:block; margin-top:.2rem; font-size:.82rem }
+  input { width:100%; min-height:2.85rem; margin-top:.3rem; border:1px solid #9eafc4; border-radius:.5rem; padding:.55rem .7rem; color:var(--ink); background:#fcfdff }
+  input::placeholder { color:#66788f }
+  input[aria-invalid=true] { border-color:#a02d32; background:#fff7f7 }
+  .error { display:block; margin-top:.25rem; color:#92262b; font-size:.85rem }
+  .optional { margin-top:1.15rem; border-top:1px solid var(--line); padding-top:1rem }
+  .optional .field { margin-top:.5rem; max-width:15rem }
+  .actions { display:flex; align-items:center; gap:.7rem; margin-top:1.15rem }
+  .primary,.secondary { border-radius:.55rem; font-weight:650; min-height:2.8rem; padding:.5rem 1rem }
+  .primary { background:var(--action); color:#fff; border:1px solid var(--action) }
+  .primary:hover { background:#103d80 }
+  .secondary { color:var(--brand); border:1px solid var(--line); background:var(--surface) }
+  .secondary:hover { background:var(--back) }
+  .result { background:#f8fbff; border-color:#cbdbee }
+  .result p { margin-top:.45rem }
+  .answer { margin-top:.9rem; padding:.8rem .9rem; border-radius:.65rem; background:#e8f0fc; color:#17396e; overflow-wrap:anywhere }
+  .answer strong { display:block; font-size:clamp(1.22rem,4vw,1.7rem); line-height:1.2; letter-spacing:-.025em }
+  .answer strong.grade { font-size:clamp(2rem,7vw,3rem); font-variant-numeric:tabular-nums }
+  .answer p { font-size:.92rem }
+  .answer[data-state=good] { background:var(--good-bg); color:var(--good) }
+  .answer[data-state=limit] { background:var(--warn-bg); color:var(--warn) }
+  dl { margin:1rem 0 0 }
+  .metric { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:baseline; gap:.5rem; border-top:1px solid #d8e3f0; padding:.58rem 0 }
+  dt { font-size:.91rem; overflow-wrap:anywhere }
+  dd { margin:0; font-weight:700; font-variant-numeric:tabular-nums }
+  footer { color:var(--muted); padding:0 0 1.5rem; font-size:.85rem }
+  .no-script { padding:1rem 0; color:#92262b }
+  @media (max-width: 45rem) { .layout { grid-template-columns:1fr } }
+  @media (max-width: 23rem) { .wrap { width:calc(100% - 1.25rem) } .fields { gap:.8rem .65rem } .card { padding:.8rem } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Marista Ipanema <span>Ano letivo 2026</span></div>
+    <h1>Calculadora de notas</h1>
+    <p>Veja quanto precisa tirar na recuperação ou no exame final.</p>
+  </div>
+</header>
+<main class="wrap">
+  <noscript><p class="no-script">Ative o JavaScript do navegador para usar a calculadora.</p></noscript>
+  <div class="tabs" role="tablist" aria-label="Tipo de cálculo">
+    <button type="button" role="tab" id="tab-pr" aria-selected="true" aria-controls="painel-pr">Recuperação (PR)</button>
+    <button type="button" role="tab" id="tab-exame" aria-selected="false" aria-controls="painel-exame" tabindex="-1">Exame final</button>
+  </div>
+  <section id="painel-pr" role="tabpanel" aria-labelledby="tab-pr">
+    <div class="layout">
+      <form class="card" id="form-pr" novalidate autocomplete="off">
+        <h2>Notas do semestre</h2>
+        <p class="intro">Use as notas de um mesmo componente curricular, com os valores do boletim. Pode digitar com vírgula.</p>
+        <div class="fields">
+          <div class="field"><label for="p1">P1 (Área)</label><span class="hint" id="p1-ajuda">De 0 a 3</span><input id="p1" type="text" inputmode="decimal" placeholder="Ex. 2,1" aria-describedby="p1-ajuda p1-erro" required><span class="error" id="p1-erro" hidden></span></div>
+          <div class="field"><label for="p2">P2 (Componente)</label><span class="hint" id="p2-ajuda">De 0 a 3</span><input id="p2" type="text" inputmode="decimal" placeholder="Ex. 2,4" aria-describedby="p2-ajuda p2-erro" required><span class="error" id="p2-erro" hidden></span></div>
+          <div class="field"><label for="evo">Simulado</label><span class="hint" id="evo-ajuda">De 0 a 1</span><input id="evo" type="text" inputmode="decimal" placeholder="Ex. 0,7" aria-describedby="evo-ajuda evo-erro" required><span class="error" id="evo-erro" hidden></span></div>
+          <div class="field"><label for="t1">T1</label><span class="hint" id="t1-ajuda">De 0 a 1</span><input id="t1" type="text" inputmode="decimal" placeholder="Ex. 0,8" aria-describedby="t1-ajuda t1-erro" required><span class="error" id="t1-erro" hidden></span></div>
+          <div class="field"><label for="t2">T2</label><span class="hint" id="t2-ajuda">De 0 a 1</span><input id="t2" type="text" inputmode="decimal" placeholder="Ex. 0,9" aria-describedby="t2-ajuda t2-erro" required><span class="error" id="t2-erro" hidden></span></div>
+          <div class="field"><label for="ic">IC/SD</label><span class="hint" id="ic-ajuda">De 0 a 1</span><input id="ic" type="text" inputmode="decimal" placeholder="Ex. 0,8" aria-describedby="ic-ajuda ic-erro" required><span class="error" id="ic-erro" hidden></span></div>
+        </div>
+        <div class="optional">
+          <label for="pr">Nota obtida na PR <span class="muted">(opcional)</span></label>
+          <span class="hint" id="pr-ajuda">De 0 a 7. Preencha apenas para simular a média com a PR.</span>
+          <div class="field"><input id="pr" type="text" inputmode="decimal" placeholder="Ex. 5,6" aria-describedby="pr-ajuda pr-erro"><span class="error" id="pr-erro" hidden></span></div>
+        </div>
+        <div class="actions"><button class="primary" type="submit">Calcular</button><button class="secondary" type="reset">Limpar</button></div>
+      </form>
+      <aside class="card result" aria-labelledby="pr-res-titulo">
+        <h3 id="pr-res-titulo">Resultado da recuperação</h3>
+        <div role="status" aria-atomic="true">
+          <p class="muted" id="pr-vazio">Preencha as notas do semestre e toque em Calcular.</p>
+          <div id="pr-resultado" hidden>
+            <div class="answer" id="pr-destaque"><strong id="pr-nota"></strong><p id="pr-msg"></p></div>
+            <dl>
+              <div class="metric"><dt>Média semestral sem PR</dt><dd id="pr-media"></dd></div>
+              <div class="metric"><dt>SOMA (P1+P2+EVO/SD)</dt><dd id="pr-soma"></dd></div>
+              <div class="metric" id="pr-com-linha" hidden><dt>Média semestral com PR</dt><dd id="pr-com"></dd></div>
+            </dl>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+  <section id="painel-exame" role="tabpanel" aria-labelledby="tab-exame" hidden>
+    <div class="layout">
+      <form class="card" id="form-exame" novalidate autocomplete="off">
+        <h2>Médias dos semestres</h2>
+        <p class="intro">Use as médias finais do mesmo componente curricular, como aparecem no boletim.</p>
+        <div class="fields">
+          <div class="field"><label for="sem1">1º semestre</label><span class="hint" id="sem1-ajuda">De 0 a 10</span><input id="sem1" type="text" inputmode="decimal" placeholder="Ex. 5,0" aria-describedby="sem1-ajuda sem1-erro" required><span class="error" id="sem1-erro" hidden></span></div>
+          <div class="field"><label for="sem2">2º semestre</label><span class="hint" id="sem2-ajuda">De 0 a 10</span><input id="sem2" type="text" inputmode="decimal" placeholder="Ex. 5,5" aria-describedby="sem2-ajuda sem2-erro" required><span class="error" id="sem2-erro" hidden></span></div>
+        </div>
+        <div class="actions"><button class="primary" type="submit">Calcular</button><button class="secondary" type="reset">Limpar</button></div>
+      </form>
+      <aside class="card result" aria-labelledby="exame-res-titulo">
+        <h3 id="exame-res-titulo">Resultado do exame</h3>
+        <div role="status" aria-atomic="true">
+          <p class="muted" id="exame-vazio">Preencha as médias e toque em Calcular.</p>
+          <div id="exame-resultado" hidden>
+            <div class="answer" id="exame-destaque"><strong id="exame-nota"></strong><p id="exame-msg"></p></div>
+            <dl><div class="metric"><dt>Média anual</dt><dd id="exame-media"></dd></div></dl>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>
+<footer class="wrap">Simulação de notas. As notas digitadas não são enviadas nem salvas pela calculadora.</footer>
+<script>
+'use strict';
+
+// Notas são representadas em milionésimos para comparar os limites sem
+// imprecisão de ponto flutuante. As médias podem ter meio milionésimo.
+const UNIDADE = 1000000;
+const LIMITE = 7 * UNIDADE;
+const MAX_EXAME = 10 * UNIDADE;
+const formato = new Intl.NumberFormat('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 7});
+const exibirNota = (n) => formato.format(n / UNIDADE);
+const $ = (id) => document.getElementById(id);
+
+function lerNota(texto, maximo, opcional = false) {
+  const limpo = texto.trim();
+  if (!limpo) return opcional ? {valor: null} : {erro: 'Informe a nota.'};
+  const normalizado = limpo.replace(',', '.');
+  if (!/^(?:\d+(?:\.\d{0,6})?|\.\d{1,6})$/.test(normalizado)) {
+    if (/^-\d/.test(normalizado)) return {erro: 'Informe uma nota de 0 a ' + maximo + '.'};
+    return {erro: 'Informe uma nota com até 6 casas decimais.'};
+  }
+  const [inteira, decimal = ''] = normalizado.split('.');
+  const valor = Number(inteira) * UNIDADE + Number(decimal.padEnd(6, '0'));
+  return valor > maximo * UNIDADE ? {erro: 'Informe uma nota de 0 a ' + maximo + '.'} : {valor};
+}
+
+function calcularPR({p1, p2, evo, t1, t2, ic, pr}) {
+  const soma = p1 + p2 + evo;
+  const outros = t1 + t2 + ic;
+  const media = soma + outros;
+  const precisa = media < LIMITE ? 2 * (LIMITE - outros) - soma : null;
+  const comPR = pr === null ? null : outros + (pr > soma ? (pr + soma) / 2 : soma);
+  return {soma, media, precisa, comPR};
+}
+
+function calcularExame({sem1, sem2}) {
+  const media = (sem1 + sem2) / 2;
+  return {media, precisa: media < LIMITE ? MAX_EXAME - media : null};
+}
+
+function limparErro(id) {
+  $(id).removeAttribute('aria-invalid');
+  $(id + '-erro').hidden = true;
+}
+
+function configurarFormulario(modo, campos, mostrar) {
+  const form = $('form-' + modo);
+  const resultado = $(modo + '-resultado');
+  const vazio = $(modo + '-vazio');
+  const inicial = vazio.textContent;
+
+  function ocultar(mensagem = inicial) {
+    resultado.hidden = true;
+    vazio.textContent = mensagem;
+    vazio.hidden = false;
+  }
+
+  form.addEventListener('input', (ev) => {
+    if (ev.target instanceof HTMLInputElement) limparErro(ev.target.id);
+    if (!resultado.hidden) ocultar('Notas alteradas. Toque em Calcular para atualizar.');
+  });
+
+  form.addEventListener('reset', () => {
+    campos.forEach(([id]) => limparErro(id));
+    ocultar();
+  });
+
+  form.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const valores = {};
+    let primeiroErro = null;
+    for (const [id, maximo, opcional] of campos) {
+      const entrada = $(id);
+      const nota = lerNota(entrada.value, maximo, opcional);
+      if (nota.erro) {
+        primeiroErro ??= entrada;
+        entrada.setAttribute('aria-invalid', 'true');
+        $(id + '-erro').textContent = nota.erro;
+        $(id + '-erro').hidden = false;
+      } else {
+        limparErro(id);
+        valores[id] = nota.valor;
+      }
+    }
+    if (primeiroErro) {
+      ocultar('Revise os campos indicados e calcule novamente.');
+      primeiroErro.focus();
+      return;
+    }
+    mostrar(valores);
+    vazio.hidden = true;
+    resultado.hidden = false;
+    if (window.matchMedia('(max-width: 45rem)').matches) {
+      const cartao = resultado.closest('.result');
+      if (cartao.getBoundingClientRect().top > window.innerHeight * 0.8) cartao.scrollIntoView({block: 'nearest'});
+    }
+  });
+}
+
+function destaque(modo, estado, titulo, explicacao) {
+  $(modo + '-destaque').dataset.state = estado;
+  $(modo + '-nota').textContent = titulo;
+  $(modo + '-nota').classList.toggle('grade', estado === 'nota');
+  $(modo + '-msg').textContent = explicacao;
+}
+
+configurarFormulario('pr', [
+  ['p1', 3], ['p2', 3], ['evo', 1], ['t1', 1], ['t2', 1], ['ic', 1], ['pr', 7, true],
+], (valores) => {
+  const {soma, media, precisa, comPR} = calcularPR(valores);
+  if (precisa === null) {
+    destaque('pr', 'good', 'Não precisa fazer PR', 'A média semestral já atingiu 7,0.');
+  } else if (precisa > LIMITE) {
+    destaque('pr', 'limit', 'A PR não é suficiente para chegar a 7,0', 'A nota necessária seria ' + exibirNota(precisa) + ', acima do máximo de 7,0 na PR.');
+  } else {
+    destaque('pr', 'nota', exibirNota(precisa), 'Nota necessária na PR para atingir média semestral 7,0.');
+  }
+  $('pr-soma').textContent = exibirNota(soma);
+  $('pr-media').textContent = exibirNota(media);
+  $('pr-com-linha').hidden = comPR === null;
+  $('pr-com').textContent = comPR === null ? '' : exibirNota(comPR);
+});
+
+configurarFormulario('exame', [['sem1', 10], ['sem2', 10]], (valores) => {
+  const {media, precisa} = calcularExame(valores);
+  if (precisa === null) {
+    destaque('exame', 'good', 'Não precisa fazer exame', 'A média anual já atingiu 7,0.');
+  } else {
+    destaque('exame', 'nota', exibirNota(precisa), 'Nota necessária no exame final.');
+  }
+  $('exame-media').textContent = exibirNota(media);
+});
+
+const abas = Array.from(document.querySelectorAll('[role=tab]'));
+function abrirAba(ativa) {
+  for (const aba of abas) {
+    const selecionada = aba === ativa;
+    aba.setAttribute('aria-selected', String(selecionada));
+    aba.tabIndex = selecionada ? 0 : -1;
+    $(aba.getAttribute('aria-controls')).hidden = !selecionada;
+  }
+}
+abas.forEach((aba, i) => {
+  aba.addEventListener('click', () => abrirAba(aba));
+  aba.addEventListener('keydown', (ev) => {
+    const alvos = {ArrowLeft: (i + abas.length - 1) % abas.length, ArrowRight: (i + 1) % abas.length, Home: 0, End: abas.length - 1};
+    if (!Object.hasOwn(alvos, ev.key)) return;
+    ev.preventDefault();
+    const alvo = abas[alvos[ev.key]];
+    abrirAba(alvo);
+    alvo.focus();
+  });
+});
+</script>
+</body>
+</html>
