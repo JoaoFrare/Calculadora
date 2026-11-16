@@ -44,7 +44,8 @@
   input[aria-invalid=true] { border-color:#a02d32; background:#fff7f7 }
   .error { display:block; margin-top:.25rem; color:#92262b; font-size:.85rem }
   .optional { margin-top:1.15rem; border-top:1px solid var(--line); padding-top:1rem }
-  .optional .field { margin-top:.5rem; max-width:15rem }
+  .optional .field { display:flex; flex-direction:column }
+  .optional .hint { flex:1 }
   .actions { display:flex; align-items:center; gap:.7rem; margin-top:1.15rem }
   .primary,.secondary { border-radius:.55rem; font-weight:650; min-height:2.8rem; padding:.5rem 1rem }
   .primary { background:var(--action); color:#fff; border:1px solid var(--action) }
@@ -97,9 +98,18 @@
           <div class="field"><label for="ic">IC/SD</label><span class="hint" id="ic-ajuda">De 0 a 1</span><input id="ic" type="text" inputmode="decimal" placeholder="Ex. 0,8" aria-describedby="ic-ajuda ic-erro" required><span class="error" id="ic-erro" hidden></span></div>
         </div>
         <div class="optional">
-          <label for="pr">Nota obtida na PR <span class="muted">(opcional)</span></label>
-          <span class="hint" id="pr-ajuda">De 0 a 7. Preencha apenas para simular a média com a PR.</span>
-          <div class="field"><input id="pr" type="text" inputmode="decimal" placeholder="Ex. 5,6" aria-describedby="pr-ajuda pr-erro"><span class="error" id="pr-erro" hidden></span></div>
+          <div class="fields">
+            <div class="field">
+              <label for="pr-sem1">Média do 1º semestre <span class="muted">(opcional)</span></label>
+              <span class="hint" id="pr-sem1-ajuda">De 0 a 10. Informe a média para calcular a meta do 2º semestre. Em branco, a meta é 7,0 no semestre.</span>
+              <input id="pr-sem1" type="text" inputmode="decimal" placeholder="Ex. 6,7" aria-describedby="pr-sem1-ajuda pr-sem1-erro"><span class="error" id="pr-sem1-erro" hidden></span>
+            </div>
+            <div class="field">
+              <label for="pr">Nota obtida na PR <span class="muted">(opcional)</span></label>
+              <span class="hint" id="pr-ajuda">De 0 a 7. Preencha apenas para simular a média com a PR.</span>
+              <input id="pr" type="text" inputmode="decimal" placeholder="Ex. 5,6" aria-describedby="pr-ajuda pr-erro"><span class="error" id="pr-erro" hidden></span>
+            </div>
+          </div>
         </div>
         <div class="actions"><button class="primary" type="submit">Calcular</button><button class="secondary" type="reset">Limpar</button></div>
       </form>
@@ -109,10 +119,14 @@
           <p class="muted" id="pr-vazio">Preencha as notas do semestre e toque em Calcular.</p>
           <div id="pr-resultado" hidden>
             <div class="answer" id="pr-destaque"><strong id="pr-nota"></strong><p id="pr-msg"></p></div>
+            <p class="hint" id="pr-elegibilidade" hidden>Como a média do 2º semestre já é de pelo menos 7,0, confirme com a escola se é possível fazer a PR neste caso.</p>
             <dl>
+              <div class="metric" id="pr-meta-linha" hidden><dt>Meta no 2º semestre para fechar o ano com 7,0</dt><dd id="pr-meta"></dd></div>
               <div class="metric"><dt>Média semestral sem PR</dt><dd id="pr-media"></dd></div>
               <div class="metric"><dt>SOMA (P1 + P2 + SIMULADO)</dt><dd id="pr-soma"></dd></div>
               <div class="metric" id="pr-com-linha" hidden><dt>Média semestral com PR</dt><dd id="pr-com"></dd></div>
+              <div class="metric" id="pr-anual-sem-linha" hidden><dt>Média anual sem PR</dt><dd id="pr-anual-sem"></dd></div>
+              <div class="metric" id="pr-anual-com-linha" hidden><dt>Média anual com PR</dt><dd id="pr-anual-com"></dd></div>
             </dl>
             <p class="hint">A PR recupera apenas P1, P2 e Simulado. As notas de T1, T2 e IC/SD permanecem na média semestral.</p>
           </div>
@@ -170,13 +184,17 @@ function lerNota(texto, maximo, opcional = false) {
   return valor > maximo * UNIDADE ? {erro: 'Informe uma nota de 0 a ' + maximo + '.'} : {valor};
 }
 
-function calcularPR({p1, p2, evo, t1, t2, ic, pr}) {
+function calcularPR({p1, p2, evo, t1, t2, ic, pr, 'pr-sem1': sem1 = null}) {
   const soma = p1 + p2 + evo;
   const outros = t1 + t2 + ic;
   const media = soma + outros;
-  const precisa = media < LIMITE ? 2 * (LIMITE - outros) - soma : null;
+  // Para fechar o ano com 7,0, os dois semestres precisam somar 14,0.
+  const meta = sem1 === null ? LIMITE : 2 * LIMITE - sem1;
+  const precisa = media < meta ? 2 * (meta - outros) - soma : null;
   const comPR = pr === null ? null : outros + (pr > soma ? (pr + soma) / 2 : soma);
-  return {soma, media, precisa, comPR};
+  const anualSem = sem1 === null ? null : (sem1 + media) / 2;
+  const anualCom = sem1 === null || comPR === null ? null : (sem1 + comPR) / 2;
+  return {soma, media, meta, precisa, comPR, anualSem, anualCom};
 }
 
 function calcularExame({sem1, sem2}) {
@@ -250,21 +268,38 @@ function destaque(modo, estado, titulo, explicacao) {
   $(modo + '-msg').textContent = explicacao;
 }
 
+function mostrarMetricaOpcional(id, valor) {
+  $(id + '-linha').hidden = valor === null;
+  $(id).textContent = valor === null ? '' : exibirNota(valor);
+}
+
 configurarFormulario('pr', [
-  ['p1', 3], ['p2', 3], ['evo', 1], ['t1', 1], ['t2', 1], ['ic', 1], ['pr', 7, true],
+  ['p1', 3], ['p2', 3], ['evo', 1], ['t1', 1], ['t2', 1], ['ic', 1], ['pr-sem1', 10, true], ['pr', 7, true],
 ], (valores) => {
-  const {soma, media, precisa, comPR} = calcularPR(valores);
+  const {soma, media, meta, precisa, comPR, anualSem, anualCom} = calcularPR(valores);
+  const consideraAno = anualSem !== null;
   if (precisa === null) {
-    destaque('pr', 'good', 'Não precisa fazer PR', 'A média semestral já atingiu 7,0.');
+    if (consideraAno) {
+      destaque('pr', 'good', 'A meta anual já foi atingida', 'Com as notas informadas, a média anual chega a 7,0 ou mais sem precisar da PR para atingir essa meta.');
+    } else {
+      destaque('pr', 'good', 'Não precisa fazer PR', 'A média semestral já atingiu 7,0.');
+    }
   } else if (precisa > LIMITE) {
-    destaque('pr', 'limit', 'A PR não é suficiente para chegar a 7,0', 'A nota necessária seria ' + exibirNota(precisa) + ', acima do máximo de 7,0 na PR.');
+    const objetivo = consideraAno ? 'atingir a meta anual' : 'chegar a 7,0 no semestre';
+    destaque('pr', 'limit', 'A PR não é suficiente para ' + objetivo, 'A nota necessária seria ' + exibirNota(precisa) + ', acima do máximo de 7,0 na PR.');
   } else {
-    destaque('pr', 'nota', exibirNota(precisa), 'Nota necessária na PR para atingir média semestral 7,0.');
+    const objetivo = consideraAno
+      ? 'atingir ' + exibirNota(meta) + ' no 2º semestre e fechar o ano com média 7,0'
+      : 'atingir média semestral 7,0';
+    destaque('pr', 'nota', exibirNota(precisa), 'Nota necessária na PR para ' + objetivo + '.');
   }
+  $('pr-elegibilidade').hidden = !(consideraAno && precisa !== null && precisa <= LIMITE && media >= LIMITE);
   $('pr-soma').textContent = exibirNota(soma);
   $('pr-media').textContent = exibirNota(media);
-  $('pr-com-linha').hidden = comPR === null;
-  $('pr-com').textContent = comPR === null ? '' : exibirNota(comPR);
+  mostrarMetricaOpcional('pr-meta', consideraAno ? meta : null);
+  mostrarMetricaOpcional('pr-com', comPR);
+  mostrarMetricaOpcional('pr-anual-sem', anualSem);
+  mostrarMetricaOpcional('pr-anual-com', anualCom);
 });
 
 configurarFormulario('exame', [['sem1', 10], ['sem2', 10]], (valores) => {
